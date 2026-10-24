@@ -1,0 +1,38 @@
+name: API CI
+
+on:
+  push:
+    branches:
+      - main
+      - workflow
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Build and Test API
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: api
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Set up Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: maven
+          cache-dependency-path: api/pom.xml
+
+      - name: Verify API
+        run: ./mvnw --batch-mode verify
