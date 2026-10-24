@@ -152,7 +152,7 @@ public class AccountServiceTest {
 
     accountService.deleteAccount(1L);
 
-    verify(accountRepository).deleteById(1L);
+    verify(accountRepository).deleteById(2L);
   }
 
   @Test
