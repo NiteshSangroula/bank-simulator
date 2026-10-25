@@ -29,3 +29,13 @@ CREATE TABLE IF NOT EXISTS transactions (
         REFERENCES account(id)
         ON DELETE SET NULL
 );
+
+CREATE TABLE IF NOT EXISTS app_user (
+    id BIGSERIAL PRIMARY KEY,
+    display_name VARCHAR(100) NOT NULL,
+    email VARCHAR(254) NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP NOT NULL,
+
+    CONSTRAINT uk_app_user_email UNIQUE (email)
+);
