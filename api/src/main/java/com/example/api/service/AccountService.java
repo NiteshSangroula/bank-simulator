@@ -2,7 +2,6 @@ package com.example.api.service;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.stream.StreamSupport;
 
 import org.springframework.stereotype.Service;
 
@@ -29,8 +28,7 @@ public class AccountService {
   }
 
   public List<AccountResponse> getAllAccounts() {
-    return StreamSupport
-        .stream(accountRepository.findAll().spliterator(), false)
+    return accountRepository.findAll().stream()
         .map(this::mapToResponse)
         .toList();
   }

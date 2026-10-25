@@ -1,39 +1,23 @@
 package com.example.api.repository;
 
-import java.util.List;
-
-import org.springframework.data.jdbc.repository.query.Query;
-import org.springframework.data.repository.CrudRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import com.example.api.entity.Transaction;
 
-public interface TransactionRepository extends CrudRepository<Transaction, Long> {
-  @Query("""
-      SELECT * FROM transactions
-      ORDER BY created_at DESC
-      LIMIT :size OFFSET :offset
-      """)
-  List<Transaction> findAllPaged(int size, int offset);
+public interface TransactionRepository extends JpaRepository<Transaction, Long> {
+
+  Page<Transaction> findAllByOrderByCreatedAtDesc(Pageable pageable);
 
   @Query("""
-      SELECT * FROM transactions
-      WHERE from_account_id = :accountId
-      OR to_account_id = :accountId
-      ORDER BY created_at DESC
-      LIMIT :size OFFSET :offset
+      SELECT transaction FROM Transaction transaction
+      WHERE transaction.fromAccountId = :accountId
+      OR transaction.toAccountId = :accountId
+      ORDER BY transaction.createdAt DESC
       """)
-  List<Transaction> findByAccountIdPaged(Long accountId, int size, int offset);
-
-  @Query("""
-          SELECT COUNT(*) FROM transactions
-      """)
-  Long countAll();
-
-  @Query("""
-          SELECT COUNT(*) FROM transactions
-          WHERE from_account_id = :accountId
-             OR to_account_id = :accountId
-      """)
-  Long countByAccountId(Long accountId);
+  Page<Transaction> findByAccountIdPaged(@Param("accountId") Long accountId, Pageable pageable);
 
 }
