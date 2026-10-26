@@ -18,6 +18,8 @@ import com.example.api.dto.request.RegisterRequest;
 import com.example.api.repository.UserRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
@@ -46,7 +48,8 @@ class AuthRegistrationIntegrationTest {
 
     mockMvc.perform(post("/api/auth/register")
         .contentType(MediaType.APPLICATION_JSON)
-        .content(objectMapper.writeValueAsString(request)))
+      .content(objectMapper.writeValueAsString(request))
+      .with(csrf()))
         .andExpect(status().isCreated())
         .andExpect(jsonPath("$.id").isNumber())
         .andExpect(jsonPath("$.displayName").value("Alex Morgan"))
@@ -64,7 +67,8 @@ class AuthRegistrationIntegrationTest {
 
     mockMvc.perform(post("/api/auth/register")
         .contentType(MediaType.APPLICATION_JSON)
-        .content(objectMapper.writeValueAsString(request)))
+      .content(objectMapper.writeValueAsString(request))
+      .with(csrf()))
         .andExpect(status().isBadRequest())
         .andExpect(jsonPath("$.fieldErrors[0].field").value("displayName"));
   }
@@ -74,9 +78,9 @@ class AuthRegistrationIntegrationTest {
     RegisterRequest request = new RegisterRequest("Alex Morgan", "alex@example.com", "correct-horse");
     String body = objectMapper.writeValueAsString(request);
 
-    mockMvc.perform(post("/api/auth/register").contentType(MediaType.APPLICATION_JSON).content(body))
+    mockMvc.perform(post("/api/auth/register").contentType(MediaType.APPLICATION_JSON).content(body).with(csrf()))
         .andExpect(status().isCreated());
-    mockMvc.perform(post("/api/auth/register").contentType(MediaType.APPLICATION_JSON).content(body))
+    mockMvc.perform(post("/api/auth/register").contentType(MediaType.APPLICATION_JSON).content(body).with(csrf()))
         .andExpect(status().isConflict())
         .andExpect(jsonPath("$.message").value("An account with this email already exists"));
   }
