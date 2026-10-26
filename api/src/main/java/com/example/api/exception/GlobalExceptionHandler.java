@@ -5,6 +5,7 @@ import java.util.List;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -82,6 +83,22 @@ public class GlobalExceptionHandler {
         null);
 
     return new ResponseEntity<>(error, HttpStatus.CONFLICT);
+  }
+
+  @ExceptionHandler(AuthenticationException.class)
+  public ResponseEntity<ErrorResponse> handleAuthenticationFailure(
+      AuthenticationException ex,
+      HttpServletRequest request) {
+
+    ErrorResponse error = new ErrorResponse(
+        LocalDateTime.now(),
+        HttpStatus.UNAUTHORIZED.value(),
+        HttpStatus.UNAUTHORIZED.getReasonPhrase(),
+        "Invalid email or password",
+        request.getRequestURI(),
+        null);
+
+    return new ResponseEntity<>(error, HttpStatus.UNAUTHORIZED);
   }
 
   // 4. Validation errors @Valid

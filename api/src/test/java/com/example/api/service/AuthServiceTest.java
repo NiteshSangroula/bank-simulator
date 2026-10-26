@@ -9,6 +9,7 @@ import java.util.Optional;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.security.authentication.AuthenticationManager;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -28,10 +29,13 @@ class AuthServiceTest {
   @Mock
   private PasswordEncoder passwordEncoder;
 
+  @Mock
+  private AuthenticationManager authenticationManager;
+
   @Test
   void registerUniqueConstraintViolationReturnsEmailConflict() {
     RegisterRequest request = new RegisterRequest("Alex Morgan", "alex@example.com", "correct-horse");
-    AuthService authService = new AuthService(userRepository, passwordEncoder);
+    AuthService authService = new AuthService(userRepository, passwordEncoder, authenticationManager);
 
     when(userRepository.findByEmail(request.email())).thenReturn(Optional.empty());
     when(passwordEncoder.encode(request.password())).thenReturn("hashed-password");

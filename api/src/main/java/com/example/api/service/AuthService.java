@@ -3,10 +3,14 @@ package com.example.api.service;
 import java.sql.SQLException;
 
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.example.api.dto.request.LoginRequest;
 import com.example.api.dto.request.RegisterRequest;
 import com.example.api.dto.response.RegisterResponse;
 import com.example.api.entity.User;
@@ -17,10 +21,20 @@ import com.example.api.repository.UserRepository;
 public class AuthService {
   private final UserRepository userRepository;
   private final PasswordEncoder passwordEncoder;
+  private final AuthenticationManager authenticationManager;
 
-  public AuthService(UserRepository userRepository, PasswordEncoder passwordEncoder) {
+  public AuthService(
+      UserRepository userRepository,
+      PasswordEncoder passwordEncoder,
+      AuthenticationManager authenticationManager) {
     this.userRepository = userRepository;
     this.passwordEncoder = passwordEncoder;
+    this.authenticationManager = authenticationManager;
+  }
+
+  public Authentication authenticate(LoginRequest request) {
+    return authenticationManager.authenticate(
+        UsernamePasswordAuthenticationToken.unauthenticated(request.email(), request.password()));
   }
 
   @Transactional
