@@ -19,6 +19,8 @@ import org.springframework.security.web.authentication.session.SessionAuthentica
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.security.web.context.SecurityContextRepository;
 
+import jakarta.servlet.DispatcherType;
+
 import static org.springframework.security.config.Customizer.withDefaults;
 
 import org.springframework.http.HttpStatus;
@@ -66,18 +68,28 @@ public class SecurityConfig {
         .exceptionHandling(exceptions -> exceptions
             .authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
         .authorizeHttpRequests(authorize -> authorize
+            .dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
+            .requestMatchers("/error").permitAll()
+
             .requestMatchers(HttpMethod.POST, "/api/auth/register").permitAll()
             .requestMatchers(HttpMethod.POST, "/api/auth/login", "/api/auth/logout").permitAll()
+            .requestMatchers(HttpMethod.GET, "/api/auth/csrf").permitAll()
+
             .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
-            .requestMatchers("/api/accounts", "/api/accounts/**", "/api/transactions", "/api/transactions/**")
+
+            .requestMatchers(
+                "/api/accounts", "/api/accounts/**",
+                "/api/transactions", "/api/transactions/**")
             .authenticated()
+
             .anyRequest().denyAll())
         .logout(logout -> logout
             .logoutUrl("/api/auth/logout")
             .invalidateHttpSession(true)
             .clearAuthentication(true)
             .deleteCookies("JSESSIONID")
-            .logoutSuccessHandler((request, response, authentication) -> response.setStatus(HttpStatus.NO_CONTENT.value())))
+            .logoutSuccessHandler(
+                (request, response, authentication) -> response.setStatus(HttpStatus.NO_CONTENT.value())))
         .formLogin(AbstractHttpConfigurer::disable)
         .httpBasic(AbstractHttpConfigurer::disable);
 
