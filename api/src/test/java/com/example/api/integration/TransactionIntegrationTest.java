@@ -4,6 +4,8 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -68,7 +70,9 @@ public class TransactionIntegrationTest {
                 "amount": 200,
                 "description": "test"
                 }
-                """.formatted(from.getId(), to.getId())))
+                """.formatted(from.getId(), to.getId()))
+            .with(user("integration-user"))
+            .with(csrf()))
         .andExpect(status().isCreated())
         .andExpect(jsonPath("$.amount").value(200));
 
@@ -128,7 +132,9 @@ public class TransactionIntegrationTest {
             "amount": 200,
             "description": "fail test"
             }
-            """.formatted(from.getId(), to.getId())))
+            """.formatted(from.getId(), to.getId()))
+        .with(user("integration-user"))
+        .with(csrf()))
         .andExpect(status().isBadRequest());
 
     Account updatedFrom = accountRepository.findById(from.getId()).get();
@@ -165,7 +171,9 @@ public class TransactionIntegrationTest {
             "amount": 200,
             "description": "deposit success"
             }
-            """.formatted(acc.getId())))
+            """.formatted(acc.getId()))
+        .with(user("integration-user"))
+        .with(csrf()))
         .andExpect(status().isCreated());
 
     Account updated = accountRepository.findById(acc.getId()).get();
@@ -205,7 +213,9 @@ public class TransactionIntegrationTest {
             "amount": 200,
             "description": "withdraw success"
             }
-            """.formatted(acc.getId())))
+            """.formatted(acc.getId()))
+        .with(user("integration-user"))
+        .with(csrf()))
         .andExpect(status().isCreated());
 
     Account updated = accountRepository.findById(acc.getId()).get();

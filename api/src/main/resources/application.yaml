@@ -15,4 +15,7 @@ spring:
 
   sql:
     init:
-    mode: always
+      mode: always
+logging:
+  level:
+    org.springframework.security: TRACE

@@ -4,6 +4,8 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -82,7 +84,7 @@ public class TransactionService {
         request.fromAccountId(),
         amount.negate());
 
-    if (updated == 0) {
+    if (updated <= 0) {
       throw new InsufficientBalanceException(request.fromAccountId());
     }
 
@@ -91,7 +93,7 @@ public class TransactionService {
         request.toAccountId(),
         amount);
 
-    if (credited == 0) {
+    if (credited <= 0) {
       throw new AccountNotFoundException(request.toAccountId());
     }
 
@@ -119,7 +121,7 @@ public class TransactionService {
         request.fromAccountId(),
         amount.negate());
 
-    if (updated == 0) {
+    if (updated <= 0) {
       throw new InsufficientBalanceException(request.fromAccountId());
     }
 
@@ -146,7 +148,7 @@ public class TransactionService {
         request.toAccountId(),
         amount);
 
-    if (updated == 0) {
+    if (updated <= 0) {
       throw new AccountNotFoundException(request.toAccountId());
     }
 
@@ -165,26 +167,19 @@ public class TransactionService {
       int page,
       int size,
       Long accountId) {
-    int offset = page * size;
-
-    List<Transaction> transactions;
-    long total;
+    Page<Transaction> result;
 
     if (accountId != null) {
-      transactions = transactionRepository.findByAccountIdPaged(accountId, size, offset);
-      total = transactionRepository.countByAccountId(accountId);
+      result = transactionRepository.findByAccountIdPaged(accountId, PageRequest.of(page, size));
     } else {
-      transactions = transactionRepository.findAllPaged(size, offset);
-      total = transactionRepository.countAll();
+      result = transactionRepository.findAllByOrderByCreatedAtDesc(PageRequest.of(page, size));
     }
 
-    List<TransactionResponse> content = transactions.stream()
+    List<TransactionResponse> content = result.getContent().stream()
         .map(this::mapToTransactionResponse)
         .toList();
 
-    int totalPages = (int) Math.ceil((double) total / size);
-
-    return new PageResponse<TransactionResponse>(content, page, size, total, totalPages);
+    return new PageResponse<>(content, page, size, result.getTotalElements(), result.getTotalPages());
   }
 
   // Get Transaction by Id
