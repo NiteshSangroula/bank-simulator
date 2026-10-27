@@ -355,10 +355,10 @@ public class TransactionControllerMvcTest {
 
     PageResponse<TransactionResponse> pageResponse = new PageResponse<>(content, 0, 10, 1L, 1);
 
-    when(service.getTransactions(0, 10, null))
+    when(service.getTransactions(0, 10, null, EMAIL))
         .thenReturn(pageResponse);
 
-    mockMvc.perform(get("/api/transactions"))
+    mockMvc.perform(get("/api/transactions").with(authenticatedPrincipal()))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.content[0].id").value(1))
         .andExpect(jsonPath("$.content[0].amount").value(100))
@@ -367,7 +367,7 @@ public class TransactionControllerMvcTest {
         .andExpect(jsonPath("$.totalElements").value(1))
         .andExpect(jsonPath("$.totalPages").value(1));
 
-    verify(service).getTransactions(0, 10, null);
+    verify(service).getTransactions(0, 10, null, EMAIL);
   }
 
   @Test
@@ -385,13 +385,14 @@ public class TransactionControllerMvcTest {
 
     PageResponse<TransactionResponse> pageResponse = new PageResponse<>(content, 1, 5, 1L, 1);
 
-    when(service.getTransactions(1, 5, 2L))
+    when(service.getTransactions(1, 5, 2L, EMAIL))
         .thenReturn(pageResponse);
 
     mockMvc.perform(get("/api/transactions")
         .param("page", "1")
         .param("size", "5")
-        .param("accountId", "2"))
+        .param("accountId", "2")
+        .with(authenticatedPrincipal()))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.content[0].id").value(2))
         .andExpect(jsonPath("$.content[0].amount").value(250))
@@ -403,7 +404,7 @@ public class TransactionControllerMvcTest {
         .andExpect(jsonPath("$.totalElements").value(1))
         .andExpect(jsonPath("$.totalPages").value(1));
 
-    verify(service).getTransactions(1, 5, 2L);
+    verify(service).getTransactions(1, 5, 2L, EMAIL);
   }
 
   // -----------GET TRANSACTION BY ID
@@ -414,10 +415,10 @@ public class TransactionControllerMvcTest {
         1L, new BigDecimal("100"), TransactionType.TRANSFER, 1L, 2L,
         LocalDateTime.now(), "test");
 
-    when(service.getTransactionById(1L))
+    when(service.getTransactionById(1L, EMAIL))
         .thenReturn(response);
 
-    mockMvc.perform(get("/api/transactions/1"))
+    mockMvc.perform(get("/api/transactions/1").with(authenticatedPrincipal()))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.id").value(1))
         .andExpect(jsonPath("$.amount").value(100))
@@ -426,21 +427,21 @@ public class TransactionControllerMvcTest {
         .andExpect(jsonPath("$.toAccountId").value(2))
         .andExpect(jsonPath("$.description").value("test"));
 
-    verify(service).getTransactionById(1L);
+    verify(service).getTransactionById(1L, EMAIL);
   }
 
   @Test
   void getTransactionById_notFound_returns404() throws Exception {
 
-    when(service.getTransactionById(1L))
+    when(service.getTransactionById(1L, EMAIL))
         .thenThrow(new TransactionNotFoundException(1L));
 
-    mockMvc.perform(get("/api/transactions/1"))
+    mockMvc.perform(get("/api/transactions/1").with(authenticatedPrincipal()))
         .andExpect(status().isNotFound())
         .andExpect(jsonPath("$.message").value("Transaction not found with id: 1"))
         .andExpect(jsonPath("$.fieldErrors").doesNotExist());
 
-    verify(service).getTransactionById(1L);
+    verify(service).getTransactionById(1L, EMAIL);
   }
 
     private RequestPostProcessor authenticatedPrincipal() {

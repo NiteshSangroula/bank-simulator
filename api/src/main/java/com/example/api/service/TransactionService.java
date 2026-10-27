@@ -167,13 +167,18 @@ public class TransactionService {
   public PageResponse<TransactionResponse> getTransactions(
       int page,
       int size,
-      Long accountId) {
+      Long accountId,
+      String email) {
     Page<Transaction> result;
 
     if (accountId != null) {
-      result = transactionRepository.findByAccountIdPaged(accountId, PageRequest.of(page, size));
+      if (!accountRepository.existsByIdAndUserEmail(accountId, email)) {
+        throw new AccountNotFoundException(accountId);
+      }
+      result = transactionRepository.findByAccountIdForOwner(
+          accountId, email, PageRequest.of(page, size));
     } else {
-      result = transactionRepository.findAllByOrderByCreatedAtDesc(PageRequest.of(page, size));
+      result = transactionRepository.findAllForOwner(email, PageRequest.of(page, size));
     }
 
     List<TransactionResponse> content = result.getContent().stream()
@@ -184,8 +189,8 @@ public class TransactionService {
   }
 
   // Get Transaction by Id
-  public TransactionResponse getTransactionById(long id) {
-    Transaction transaction = transactionRepository.findById(id)
+  public TransactionResponse getTransactionById(long id, String email) {
+    Transaction transaction = transactionRepository.findByIdForOwner(id, email)
         .orElseThrow(() -> new TransactionNotFoundException(id));
 
     return mapToTransactionResponse(transaction);

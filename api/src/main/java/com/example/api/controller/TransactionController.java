@@ -37,9 +37,11 @@ public class TransactionController {
   public ResponseEntity<PageResponse<TransactionResponse>> getAllTransactions(
       @RequestParam(defaultValue = "0") int page,
       @RequestParam(defaultValue = "10") int size,
-      @RequestParam(required = false) Long accountId) {
+      @RequestParam(required = false) Long accountId,
+      Authentication authentication) {
 
-    PageResponse<TransactionResponse> result = transactionService.getTransactions(page, size, accountId);
+    PageResponse<TransactionResponse> result = transactionService.getTransactions(
+        page, size, accountId, authentication.getName());
 
     return ResponseEntity.ok(result);
   }
@@ -47,8 +49,9 @@ public class TransactionController {
   @Operation(summary = "Get transaction by ID")
   @GetMapping("/{id}")
   public ResponseEntity<TransactionResponse> getTransactionById(
-      @PathVariable long id) {
-    return ResponseEntity.ok(transactionService.getTransactionById(id));
+      @PathVariable long id,
+      Authentication authentication) {
+    return ResponseEntity.ok(transactionService.getTransactionById(id, authentication.getName()));
   }
 
   @Operation(summary = "Transfer amount from one account to another")
