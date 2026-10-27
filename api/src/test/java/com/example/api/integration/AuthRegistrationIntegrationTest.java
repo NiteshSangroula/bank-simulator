@@ -15,6 +15,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
 import com.example.api.dto.request.RegisterRequest;
+import com.example.api.repository.AccountRepository;
 import com.example.api.repository.UserRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -35,10 +36,14 @@ class AuthRegistrationIntegrationTest {
   private UserRepository userRepository;
 
   @Autowired
+  private AccountRepository accountRepository;
+
+  @Autowired
   private PasswordEncoder passwordEncoder;
 
   @BeforeEach
   void clearUsers() {
+    accountRepository.deleteAll();
     userRepository.deleteAll();
   }
 

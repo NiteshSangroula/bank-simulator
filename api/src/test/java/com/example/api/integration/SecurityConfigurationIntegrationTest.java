@@ -28,6 +28,7 @@ import org.springframework.test.web.servlet.MvcResult;
 
 import com.example.api.dto.request.LoginRequest;
 import com.example.api.entity.User;
+import com.example.api.repository.AccountRepository;
 import com.example.api.repository.UserRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -46,6 +47,9 @@ class SecurityConfigurationIntegrationTest {
   private UserRepository userRepository;
 
   @Autowired
+  private AccountRepository accountRepository;
+
+  @Autowired
   private UserDetailsService userDetailsService;
 
   @Autowired
@@ -59,6 +63,7 @@ class SecurityConfigurationIntegrationTest {
 
   @BeforeEach
   void clearUsers() {
+    accountRepository.deleteAll();
     userRepository.deleteAll();
   }
 

@@ -21,8 +21,10 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import com.example.api.entity.Account;
 import com.example.api.entity.Transaction;
+import com.example.api.entity.User;
 import com.example.api.repository.AccountRepository;
 import com.example.api.repository.TransactionRepository;
+import com.example.api.repository.UserRepository;
 
 @SpringBootTest
 @ActiveProfiles("test")
@@ -38,21 +40,35 @@ public class TransactionIntegrationTest {
   @Autowired
   private TransactionRepository transactionRepository;
 
+    @Autowired
+    private UserRepository userRepository;
+
+    private User owner;
+
   @BeforeEach
   void setup() {
-    accountRepository.deleteAll();
     transactionRepository.deleteAll();
+    accountRepository.deleteAll();
+    userRepository.deleteAll();
+
+    owner = new User();
+    owner.setDisplayName("Integration User");
+    owner.setEmail("integration@example.com");
+    owner.setPasswordHash("not-used");
+    owner = userRepository.saveAndFlush(owner);
   }
 
   // Transfer Success
   @Test
   void transfer_success() throws Exception {
     Account from = new Account();
+    from.setUser(owner);
     from.setName("A");
     from.setBalance(BigDecimal.valueOf(1000));
     from.setCreatedAt(LocalDateTime.now());
 
     Account to = new Account();
+    to.setUser(owner);
     to.setName("B");
     to.setBalance(BigDecimal.valueOf(500));
     to.setCreatedAt(LocalDateTime.now());
@@ -111,11 +127,13 @@ public class TransactionIntegrationTest {
   void transfer_insufficientBalance_shouldFailAndRollback() throws Exception {
 
     Account from = new Account();
+    from.setUser(owner);
     from.setName("A");
     from.setBalance(BigDecimal.valueOf(100));
     from.setCreatedAt(LocalDateTime.now());
 
     Account to = new Account();
+    to.setUser(owner);
     to.setName("B");
     to.setBalance(BigDecimal.valueOf(500));
     to.setCreatedAt(LocalDateTime.now());
@@ -157,6 +175,7 @@ public class TransactionIntegrationTest {
   @Test
   void deposit_success() throws Exception {
     Account acc = new Account();
+    acc.setUser(owner);
     acc.setName("A");
     acc.setBalance(BigDecimal.valueOf(500));
     acc.setCreatedAt(LocalDateTime.now());
@@ -199,6 +218,7 @@ public class TransactionIntegrationTest {
   @Test
   void withdraw_success() throws Exception {
     Account acc = new Account();
+    acc.setUser(owner);
     acc.setName("A");
     acc.setBalance(BigDecimal.valueOf(500));
     acc.setCreatedAt(LocalDateTime.now());
