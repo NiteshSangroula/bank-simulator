@@ -67,11 +67,11 @@ public class TransactionService {
 
   // 1. TRANSFER
   @Transactional
-  public TransactionResponse transfer(TransferRequest request) {
+  public TransactionResponse transfer(TransferRequest request, String email) {
 
     BigDecimal amount = request.amount();
 
-    if (!accountRepository.existsById(request.fromAccountId())) {
+    if (!accountRepository.existsByIdAndUserEmail(request.fromAccountId(), email)) {
       throw new AccountNotFoundException(request.fromAccountId());
     }
 
@@ -80,11 +80,15 @@ public class TransactionService {
     }
 
     // 1. Debit sender first
-    int updated = accountRepository.changeBalance(
+    int updated = accountRepository.changeBalanceForOwner(
         request.fromAccountId(),
+        email,
         amount.negate());
 
     if (updated <= 0) {
+      if (!accountRepository.existsByIdAndUserEmail(request.fromAccountId(), email)) {
+        throw new AccountNotFoundException(request.fromAccountId());
+      }
       throw new InsufficientBalanceException(request.fromAccountId());
     }
 
@@ -110,18 +114,18 @@ public class TransactionService {
 
   // 2. WITHDRAW
   @Transactional
-  public TransactionResponse withdraw(WithdrawRequest request) {
+  public TransactionResponse withdraw(WithdrawRequest request, String email) {
     BigDecimal amount = request.amount();
 
-    if (!accountRepository.existsById(request.fromAccountId())) {
-      throw new AccountNotFoundException(request.fromAccountId());
-    }
-
-    int updated = accountRepository.changeBalance(
+    int updated = accountRepository.changeBalanceForOwner(
         request.fromAccountId(),
+        email,
         amount.negate());
 
     if (updated <= 0) {
+      if (!accountRepository.existsByIdAndUserEmail(request.fromAccountId(), email)) {
+        throw new AccountNotFoundException(request.fromAccountId());
+      }
       throw new InsufficientBalanceException(request.fromAccountId());
     }
 
@@ -137,15 +141,12 @@ public class TransactionService {
 
   // 3. DEPOSIT
   @Transactional
-  public TransactionResponse deposit(DepositRequest request) {
+  public TransactionResponse deposit(DepositRequest request, String email) {
     BigDecimal amount = request.amount();
 
-    if (!accountRepository.existsById(request.toAccountId())) {
-      throw new AccountNotFoundException(request.toAccountId());
-    }
-
-    int updated = accountRepository.changeBalance(
+    int updated = accountRepository.changeBalanceForOwner(
         request.toAccountId(),
+        email,
         amount);
 
     if (updated <= 0) {
@@ -166,13 +167,18 @@ public class TransactionService {
   public PageResponse<TransactionResponse> getTransactions(
       int page,
       int size,
-      Long accountId) {
+      Long accountId,
+      String email) {
     Page<Transaction> result;
 
     if (accountId != null) {
-      result = transactionRepository.findByAccountIdPaged(accountId, PageRequest.of(page, size));
+      if (!accountRepository.existsByIdAndUserEmail(accountId, email)) {
+        throw new AccountNotFoundException(accountId);
+      }
+      result = transactionRepository.findByAccountIdForOwner(
+          accountId, email, PageRequest.of(page, size));
     } else {
-      result = transactionRepository.findAllByOrderByCreatedAtDesc(PageRequest.of(page, size));
+      result = transactionRepository.findAllForOwner(email, PageRequest.of(page, size));
     }
 
     List<TransactionResponse> content = result.getContent().stream()
@@ -183,8 +189,8 @@ public class TransactionService {
   }
 
   // Get Transaction by Id
-  public TransactionResponse getTransactionById(long id) {
-    Transaction transaction = transactionRepository.findById(id)
+  public TransactionResponse getTransactionById(long id, String email) {
+    Transaction transaction = transactionRepository.findByIdForOwner(id, email)
         .orElseThrow(() -> new TransactionNotFoundException(id));
 
     return mapToTransactionResponse(transaction);

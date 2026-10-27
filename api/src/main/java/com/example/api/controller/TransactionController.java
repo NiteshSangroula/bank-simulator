@@ -2,6 +2,7 @@ package com.example.api.controller;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -36,9 +37,11 @@ public class TransactionController {
   public ResponseEntity<PageResponse<TransactionResponse>> getAllTransactions(
       @RequestParam(defaultValue = "0") int page,
       @RequestParam(defaultValue = "10") int size,
-      @RequestParam(required = false) Long accountId) {
+      @RequestParam(required = false) Long accountId,
+      Authentication authentication) {
 
-    PageResponse<TransactionResponse> result = transactionService.getTransactions(page, size, accountId);
+    PageResponse<TransactionResponse> result = transactionService.getTransactions(
+        page, size, accountId, authentication.getName());
 
     return ResponseEntity.ok(result);
   }
@@ -46,16 +49,18 @@ public class TransactionController {
   @Operation(summary = "Get transaction by ID")
   @GetMapping("/{id}")
   public ResponseEntity<TransactionResponse> getTransactionById(
-      @PathVariable long id) {
-    return ResponseEntity.ok(transactionService.getTransactionById(id));
+      @PathVariable long id,
+      Authentication authentication) {
+    return ResponseEntity.ok(transactionService.getTransactionById(id, authentication.getName()));
   }
 
   @Operation(summary = "Transfer amount from one account to another")
   @PostMapping("/transfer")
   public ResponseEntity<TransactionResponse> createTransferTransaction(
-      @Valid @RequestBody TransferRequest request) {
+      @Valid @RequestBody TransferRequest request,
+      Authentication authentication) {
 
-    TransactionResponse created = transactionService.transfer(request);
+    TransactionResponse created = transactionService.transfer(request, authentication.getName());
 
     return ResponseEntity
         .status(HttpStatus.CREATED)
@@ -65,9 +70,10 @@ public class TransactionController {
   @Operation(summary = "Withdraw amount from an account")
   @PostMapping("/withdraw")
   public ResponseEntity<TransactionResponse> createWithdrawTransaction(
-      @Valid @RequestBody WithdrawRequest request) {
+      @Valid @RequestBody WithdrawRequest request,
+      Authentication authentication) {
 
-    TransactionResponse created = transactionService.withdraw(request);
+    TransactionResponse created = transactionService.withdraw(request, authentication.getName());
 
     return ResponseEntity
         .status(HttpStatus.CREATED)
@@ -77,9 +83,10 @@ public class TransactionController {
   @Operation(summary = "Deposit amount to an account")
   @PostMapping("/deposit")
   public ResponseEntity<TransactionResponse> createDepositTransaction(
-      @Valid @RequestBody DepositRequest request) {
+      @Valid @RequestBody DepositRequest request,
+      Authentication authentication) {
 
-    TransactionResponse created = transactionService.deposit(request);
+    TransactionResponse created = transactionService.deposit(request, authentication.getName());
 
     return ResponseEntity
         .status(HttpStatus.CREATED)

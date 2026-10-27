@@ -2,6 +2,8 @@ package com.example.api.controller;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -20,7 +22,9 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.request.RequestPostProcessor;
 
 import com.example.api.dto.request.CreateAccountRequest;
 import com.example.api.dto.response.AccountResponse;
@@ -31,6 +35,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 @WebMvcTest(AccountController.class)
 @AutoConfigureMockMvc(addFilters = false)
 public class AccountControllerMvcTest {
+    private static final String EMAIL = "account@example.com";
+
   @Autowired
   private MockMvc mockMvc;
 
@@ -50,12 +56,13 @@ public class AccountControllerMvcTest {
     AccountResponse response = new AccountResponse(
         1L, "Nitesh", new BigDecimal("1000"), LocalDateTime.now());
 
-    when(accountService.createAccount(any(CreateAccountRequest.class)))
+    when(accountService.createAccount(any(CreateAccountRequest.class), eq(EMAIL)))
         .thenReturn(response);
 
     mockMvc.perform(post("/api/accounts")
         .contentType(MediaType.APPLICATION_JSON)
-        .content(objectMapper.writeValueAsString(request)))
+        .content(objectMapper.writeValueAsString(request))
+        .with(authenticatedPrincipal()))
         .andExpect(status().isCreated())
         .andExpect(jsonPath("$.id").value(1))
         .andExpect(jsonPath("$.name").value("Nitesh"))
@@ -75,7 +82,7 @@ public class AccountControllerMvcTest {
         .andExpect(jsonPath("$.fieldErrors[0].code").value("NotBlank"))
         .andExpect(jsonPath("$.message").doesNotExist());
 
-    verify(accountService, never()).createAccount(any());
+    verify(accountService, never()).createAccount(any(), anyString());
   }
 
   @Test
@@ -91,7 +98,7 @@ public class AccountControllerMvcTest {
         .andExpect(jsonPath("$.fieldErrors[0].code").value("Positive"))
         .andExpect(jsonPath("$.message").doesNotExist());
 
-    verify(accountService, never()).createAccount(any());
+    verify(accountService, never()).createAccount(any(), anyString());
   }
 
   @Test
@@ -107,7 +114,7 @@ public class AccountControllerMvcTest {
         .andExpect(jsonPath("$.fieldErrors[0].code").value("NotNull"))
         .andExpect(jsonPath("$.message").doesNotExist());
 
-    verify(accountService, never()).createAccount(any());
+    verify(accountService, never()).createAccount(any(), anyString());
   }
 
   // get all accounts
@@ -117,17 +124,17 @@ public class AccountControllerMvcTest {
         new AccountResponse(
             1L, "Nitesh", new BigDecimal("100"), LocalDateTime.now()));
 
-    when(accountService.getAllAccounts())
+    when(accountService.getAllAccounts(EMAIL))
         .thenReturn(accounts);
 
-    mockMvc.perform(get("/api/accounts"))
+    mockMvc.perform(get("/api/accounts").with(authenticatedPrincipal()))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$").isArray())
         .andExpect(jsonPath("$[0].id").value(1))
         .andExpect(jsonPath("$[0].name").value("Nitesh"))
         .andExpect(jsonPath("$[0].balance").value(100));
 
-    verify(accountService).getAllAccounts();
+    verify(accountService).getAllAccounts(EMAIL);
   }
 
   // get account by id
@@ -136,53 +143,60 @@ public class AccountControllerMvcTest {
     AccountResponse response = new AccountResponse(
         1L, "Nitesh", new BigDecimal("100"), LocalDateTime.now());
 
-    when(accountService.getAccountById(anyLong()))
+    when(accountService.getAccountById(anyLong(), eq(EMAIL)))
         .thenReturn(response);
 
-    mockMvc.perform(get("/api/accounts/1"))
+    mockMvc.perform(get("/api/accounts/1").with(authenticatedPrincipal()))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.id").value(1))
         .andExpect(jsonPath("$.name").value("Nitesh"))
         .andExpect(jsonPath("$.balance").value(100));
 
-    verify(accountService).getAccountById(1L);
+    verify(accountService).getAccountById(1L, EMAIL);
   }
 
   @Test
   void getAccountById_notFound_returns404() throws Exception {
 
-    when(accountService.getAccountById(1L))
+    when(accountService.getAccountById(1L, EMAIL))
         .thenThrow(new AccountNotFoundException(1L));
 
-    mockMvc.perform(get("/api/accounts/1"))
+    mockMvc.perform(get("/api/accounts/1").with(authenticatedPrincipal()))
         .andExpect(status().isNotFound())
         .andExpect(jsonPath("$.message").value("Account not found with id: 1"))
         .andExpect(jsonPath("$.fieldErrors").doesNotExist());
 
-    verify(accountService).getAccountById(1L);
+    verify(accountService).getAccountById(1L, EMAIL);
   }
 
   // delete account
   @Test
   void deleteAccount_validId_returns204() throws Exception {
 
-    mockMvc.perform(delete("/api/accounts/1"))
+    mockMvc.perform(delete("/api/accounts/1").with(authenticatedPrincipal()))
         .andExpect(status().isNoContent());
 
-    verify(accountService).deleteAccount(1L);
+    verify(accountService).deleteAccount(1L, EMAIL);
   }
 
   @Test
   void deleteAccount_notFound_returns404() throws Exception {
     doThrow(new AccountNotFoundException(1L))
-        .when(accountService).deleteAccount(1L);
+        .when(accountService).deleteAccount(1L, EMAIL);
 
-    mockMvc.perform(delete("/api/accounts/1"))
+    mockMvc.perform(delete("/api/accounts/1").with(authenticatedPrincipal()))
         .andExpect(status().isNotFound())
         .andExpect(jsonPath("$.message").value("Account not found with id: 1"))
         .andExpect(jsonPath("$.fieldErrors").doesNotExist());
 
-    verify(accountService).deleteAccount(1L);
+    verify(accountService).deleteAccount(1L, EMAIL);
   }
+
+    private RequestPostProcessor authenticatedPrincipal() {
+        return request -> {
+            request.setUserPrincipal(UsernamePasswordAuthenticationToken.authenticated(EMAIL, null, List.of()));
+            return request;
+        };
+    }
 
 }

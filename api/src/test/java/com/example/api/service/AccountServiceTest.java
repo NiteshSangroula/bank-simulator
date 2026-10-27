@@ -23,13 +23,20 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import com.example.api.dto.request.CreateAccountRequest;
 import com.example.api.dto.response.AccountResponse;
 import com.example.api.entity.Account;
+import com.example.api.entity.User;
 import com.example.api.exception.AccountNotFoundException;
 import com.example.api.repository.AccountRepository;
+import com.example.api.repository.UserRepository;
 
 @ExtendWith(MockitoExtension.class)
 public class AccountServiceTest {
+  private static final String EMAIL = "owner@example.com";
+
   @Mock
   private AccountRepository accountRepository;
+
+  @Mock
+  private UserRepository userRepository;
 
   @InjectMocks
   private AccountService accountService;
@@ -42,22 +49,30 @@ public class AccountServiceTest {
         "Cole Palmer",
         new BigDecimal(1000));
 
+    User owner = new User();
+    owner.setId(7L);
+    owner.setEmail(EMAIL);
+
     Account savedAccount = new Account();
     savedAccount.setId(1L);
+    savedAccount.setUser(owner);
     savedAccount.setName("Cole Palmer");
     savedAccount.setBalance(new BigDecimal(1000));
     savedAccount.setCreatedAt(LocalDateTime.now());
 
+    when(userRepository.findByEmail(EMAIL)).thenReturn(Optional.of(owner));
     when(accountRepository.save(any(Account.class))).thenReturn(savedAccount);
 
     AccountResponse response = accountService.createAccount(
-        createAccountRequest);
+      createAccountRequest, EMAIL);
 
     assertNotNull(response);
     assertEquals(1L, response.id());
     assertEquals("Cole Palmer", response.name());
     assertEquals(new BigDecimal(1000), response.balance());
     assertNotNull(response.createdAt());
+    verify(userRepository).findByEmail(EMAIL);
+    verify(accountRepository).save(any(Account.class));
   }
 
   /*
@@ -94,22 +109,22 @@ public class AccountServiceTest {
     account2.setBalance(new BigDecimal("2000"));
     account2.setCreatedAt(LocalDateTime.now());
 
-    when(accountRepository.findAll()).thenReturn(List.of(account1, account2));
+    when(accountRepository.findAllByUserEmail(EMAIL)).thenReturn(List.of(account1, account2));
 
     // act
-    List<AccountResponse> result = accountService.getAllAccounts();
+    List<AccountResponse> result = accountService.getAllAccounts(EMAIL);
 
     assertEquals(2, result.size());
     assertEquals("A", result.get(0).name());
     assertEquals("B", result.get(1).name());
-    verify(accountRepository).findAll();
+    verify(accountRepository).findAllByUserEmail(EMAIL);
   }
 
   @Test
   public void getAllAccounts_shouldReturnEmptyList_whenNoAccountsExist() {
-    when(accountRepository.findAll()).thenReturn(List.of());
+    when(accountRepository.findAllByUserEmail(EMAIL)).thenReturn(List.of());
 
-    List<AccountResponse> result = accountService.getAllAccounts();
+    List<AccountResponse> result = accountService.getAllAccounts(EMAIL);
 
     assertTrue(result.isEmpty());
   }
@@ -124,44 +139,45 @@ public class AccountServiceTest {
     acc.setBalance(new BigDecimal("100"));
     acc.setCreatedAt(LocalDateTime.now());
 
-    when(accountRepository.findById(1L)).thenReturn(Optional.of(acc));
+    when(accountRepository.findByIdAndUserEmail(1L, EMAIL)).thenReturn(Optional.of(acc));
 
-    AccountResponse result = accountService.getAccountById(1L);
+    AccountResponse result = accountService.getAccountById(1L, EMAIL);
 
     assertEquals(1L, result.id());
     assertEquals("Cole", result.name());
     assertEquals(new BigDecimal("100"), result.balance());
 
-    verify(accountRepository).findById(1L);
+    verify(accountRepository).findByIdAndUserEmail(1L, EMAIL);
   }
 
   @Test
   public void getAccountById_shouldThrowException_whenAccountDoesNotExist() {
 
-    when(accountRepository.findById(1L)).thenReturn(Optional.empty());
+    when(accountRepository.findByIdAndUserEmail(1L, EMAIL)).thenReturn(Optional.empty());
 
-    assertThrows(AccountNotFoundException.class, () -> accountService.getAccountById(1L));
+    assertThrows(AccountNotFoundException.class, () -> accountService.getAccountById(1L, EMAIL));
 
-    verify(accountRepository).findById(1L);
+    verify(accountRepository).findByIdAndUserEmail(1L, EMAIL);
   }
 
   // ====== DELETE ACCOUNT TESTS ======
   @Test
   public void deleteAccount_shouldCallRepository() {
-    when(accountRepository.existsById(1L)).thenReturn(true);
+    Account account = new Account();
+    when(accountRepository.findByIdAndUserEmail(1L, EMAIL)).thenReturn(Optional.of(account));
 
-    accountService.deleteAccount(1L);
+    accountService.deleteAccount(1L, EMAIL);
 
-    verify(accountRepository).deleteById(1L);
+    verify(accountRepository).delete(account);
   }
 
   @Test
   public void deleteAccount_shouldThrowException_whenAccountDoesNotExist() {
-    when(accountRepository.existsById(1L)).thenReturn(false);
+    when(accountRepository.findByIdAndUserEmail(1L, EMAIL)).thenReturn(Optional.empty());
 
-    assertThrows(AccountNotFoundException.class, () -> accountService.deleteAccount(1L));
+    assertThrows(AccountNotFoundException.class, () -> accountService.deleteAccount(1L, EMAIL));
 
-    verify(accountRepository, never()).deleteById(any());
+    verify(accountRepository, never()).delete(any(Account.class));
   }
 
 }

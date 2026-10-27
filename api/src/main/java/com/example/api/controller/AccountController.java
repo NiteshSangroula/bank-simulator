@@ -4,6 +4,7 @@ import java.util.List;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -32,25 +33,27 @@ public class AccountController {
 
   @Operation(summary = "Get all accounts")
   @GetMapping
-  public ResponseEntity<List<AccountResponse>> getAllAccount() {
+  public ResponseEntity<List<AccountResponse>> getAllAccount(Authentication authentication) {
 
-    return ResponseEntity.ok(accountService.getAllAccounts());
+    return ResponseEntity.ok(accountService.getAllAccounts(authentication.getName()));
   }
 
   @Operation(summary = "Get account by ID")
   @GetMapping("/{id}")
   public ResponseEntity<AccountResponse> getAccountById(
-      @PathVariable long id) {
+      @PathVariable long id,
+      Authentication authentication) {
 
-    return ResponseEntity.ok(accountService.getAccountById(id));
+    return ResponseEntity.ok(accountService.getAccountById(id, authentication.getName()));
   }
 
   @Operation(summary = "Create new account")
   @PostMapping
   public ResponseEntity<AccountResponse> createAccount(
-      @Valid @RequestBody CreateAccountRequest createAccountRequest) {
+      @Valid @RequestBody CreateAccountRequest createAccountRequest,
+      Authentication authentication) {
 
-    AccountResponse created = accountService.createAccount(createAccountRequest);
+    AccountResponse created = accountService.createAccount(createAccountRequest, authentication.getName());
     return ResponseEntity
         .status(HttpStatus.CREATED)
         .body(created);
@@ -58,9 +61,9 @@ public class AccountController {
 
   @Operation(summary = "Delete account by ID")
   @DeleteMapping("/{id}")
-  public ResponseEntity<Void> deleteAccount(@PathVariable long id) {
+  public ResponseEntity<Void> deleteAccount(@PathVariable long id, Authentication authentication) {
 
-    accountService.deleteAccount(id);
+    accountService.deleteAccount(id, authentication.getName());
     return ResponseEntity.noContent().build();
   }
 
