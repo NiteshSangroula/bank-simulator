@@ -47,6 +47,27 @@ class AccountRepositoryTest {
         accountRepository.findById(account.getId()).orElseThrow().getBalance()));
   }
 
+      @Test
+      void changesBalanceOnlyForMatchingOwner() {
+      User owner = userRepository.saveAndFlush(newOwner());
+      User other = new User();
+      other.setDisplayName("Other User");
+      other.setEmail("other@example.com");
+      other.setPasswordHash("not-used");
+      userRepository.saveAndFlush(other);
+      Account account = accountRepository.saveAndFlush(newAccount("100.00", owner));
+
+      assertEquals(0, accountRepository.changeBalanceForOwner(
+        account.getId(), "other@example.com", new BigDecimal("25.00")));
+      assertEquals(0, new BigDecimal("100.00").compareTo(
+        accountRepository.findById(account.getId()).orElseThrow().getBalance()));
+
+      assertEquals(1, accountRepository.changeBalanceForOwner(
+        account.getId(), owner.getEmail(), new BigDecimal("25.00")));
+      assertEquals(0, new BigDecimal("125.00").compareTo(
+        accountRepository.findById(account.getId()).orElseThrow().getBalance()));
+      }
+
   private Account newAccount(String balance, User owner) {
     Account account = new Account();
     account.setUser(owner);

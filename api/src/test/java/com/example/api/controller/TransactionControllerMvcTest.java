@@ -1,6 +1,8 @@
 package com.example.api.controller;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -20,7 +22,9 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.request.RequestPostProcessor;
 
 import com.example.api.dto.request.DepositRequest;
 import com.example.api.dto.request.TransferRequest;
@@ -35,6 +39,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 @WebMvcTest(TransactionController.class)
 @AutoConfigureMockMvc(addFilters = false)
 public class TransactionControllerMvcTest {
+    private static final String EMAIL = "transaction@example.com";
+
 
   @Autowired
   private MockMvc mockMvc;
@@ -160,12 +166,13 @@ public class TransactionControllerMvcTest {
         1L, new BigDecimal("100"), TransactionType.WITHDRAW,
         1L, null, LocalDateTime.now(), "test");
 
-    when(service.withdraw(any(WithdrawRequest.class)))
+    when(service.withdraw(any(WithdrawRequest.class), eq(EMAIL)))
         .thenReturn(response);
 
     mockMvc.perform(post("/api/transactions/withdraw")
         .contentType(MediaType.APPLICATION_JSON)
-        .content(objectMapper.writeValueAsString(request)))
+        .content(objectMapper.writeValueAsString(request))
+        .with(authenticatedPrincipal()))
         .andExpect(status().isCreated())
         .andExpect(jsonPath("$.id").value(1L))
         .andExpect(jsonPath("$.amount").value(100))
@@ -188,7 +195,7 @@ public class TransactionControllerMvcTest {
         .andExpect(jsonPath("$.fieldErrors[0].code").value("Positive"))
         .andExpect(jsonPath("$.message").doesNotExist());
 
-    verify(service, never()).withdraw(any());
+    verify(service, never()).withdraw(any(), anyString());
   }
 
   @Test
@@ -204,7 +211,7 @@ public class TransactionControllerMvcTest {
         .andExpect(jsonPath("$.fieldErrors[0].code").value("NotNull"))
         .andExpect(jsonPath("$.message").doesNotExist());
 
-    verify(service, never()).withdraw(any());
+    verify(service, never()).withdraw(any(), anyString());
   }
 
   @Test
@@ -220,7 +227,7 @@ public class TransactionControllerMvcTest {
         .andExpect(jsonPath("$.fieldErrors[0].code").value("NotNull"))
         .andExpect(jsonPath("$.message").doesNotExist());
 
-    verify(service, never()).withdraw(any());
+    verify(service, never()).withdraw(any(), anyString());
   }
 
   @Test
@@ -236,7 +243,7 @@ public class TransactionControllerMvcTest {
         .andExpect(jsonPath("$.fieldErrors[0].code").value("NotBlank"))
         .andExpect(jsonPath("$.message").doesNotExist());
 
-    verify(service, never()).withdraw(any());
+    verify(service, never()).withdraw(any(), anyString());
   }
 
   // -----------------------DEPOSIT
@@ -250,12 +257,13 @@ public class TransactionControllerMvcTest {
         1L, new BigDecimal("100"), TransactionType.DEPOSIT,
         null, 1L, LocalDateTime.now(), "test");
 
-    when(service.deposit(any(DepositRequest.class)))
+    when(service.deposit(any(DepositRequest.class), eq(EMAIL)))
         .thenReturn(response);
 
     mockMvc.perform(post("/api/transactions/deposit")
         .contentType(MediaType.APPLICATION_JSON)
-        .content(objectMapper.writeValueAsString(request)))
+        .content(objectMapper.writeValueAsString(request))
+        .with(authenticatedPrincipal()))
         .andExpect(status().isCreated())
         .andExpect(jsonPath("$.id").value(1L))
         .andExpect(jsonPath("$.amount").value(100))
@@ -278,7 +286,7 @@ public class TransactionControllerMvcTest {
         .andExpect(jsonPath("$.fieldErrors[0].code").value("Positive"))
         .andExpect(jsonPath("$.message").doesNotExist());
 
-    verify(service, never()).deposit(any());
+    verify(service, never()).deposit(any(), anyString());
   }
 
   @Test
@@ -294,7 +302,7 @@ public class TransactionControllerMvcTest {
         .andExpect(jsonPath("$.fieldErrors[0].code").value("NotNull"))
         .andExpect(jsonPath("$.message").doesNotExist());
 
-    verify(service, never()).deposit(any());
+    verify(service, never()).deposit(any(), anyString());
   }
 
   @Test
@@ -310,7 +318,7 @@ public class TransactionControllerMvcTest {
         .andExpect(jsonPath("$.fieldErrors[0].code").value("NotNull"))
         .andExpect(jsonPath("$.message").doesNotExist());
 
-    verify(service, never()).deposit(any());
+    verify(service, never()).deposit(any(), anyString());
   }
 
   @Test
@@ -326,7 +334,7 @@ public class TransactionControllerMvcTest {
         .andExpect(jsonPath("$.fieldErrors[0].code").value("NotBlank"))
         .andExpect(jsonPath("$.message").doesNotExist());
 
-    verify(service, never()).deposit(any());
+    verify(service, never()).deposit(any(), anyString());
   }
 
   // -----------GET ALL TRANSACTIONS
@@ -433,4 +441,11 @@ public class TransactionControllerMvcTest {
 
     verify(service).getTransactionById(1L);
   }
+
+    private RequestPostProcessor authenticatedPrincipal() {
+        return request -> {
+            request.setUserPrincipal(UsernamePasswordAuthenticationToken.authenticated(EMAIL, null, List.of()));
+            return request;
+        };
+    }
 }

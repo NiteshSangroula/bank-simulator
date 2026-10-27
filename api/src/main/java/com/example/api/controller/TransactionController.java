@@ -2,6 +2,7 @@ package com.example.api.controller;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -65,9 +66,10 @@ public class TransactionController {
   @Operation(summary = "Withdraw amount from an account")
   @PostMapping("/withdraw")
   public ResponseEntity<TransactionResponse> createWithdrawTransaction(
-      @Valid @RequestBody WithdrawRequest request) {
+      @Valid @RequestBody WithdrawRequest request,
+      Authentication authentication) {
 
-    TransactionResponse created = transactionService.withdraw(request);
+    TransactionResponse created = transactionService.withdraw(request, authentication.getName());
 
     return ResponseEntity
         .status(HttpStatus.CREATED)
@@ -77,9 +79,10 @@ public class TransactionController {
   @Operation(summary = "Deposit amount to an account")
   @PostMapping("/deposit")
   public ResponseEntity<TransactionResponse> createDepositTransaction(
-      @Valid @RequestBody DepositRequest request) {
+      @Valid @RequestBody DepositRequest request,
+      Authentication authentication) {
 
-    TransactionResponse created = transactionService.deposit(request);
+    TransactionResponse created = transactionService.deposit(request, authentication.getName());
 
     return ResponseEntity
         .status(HttpStatus.CREATED)

@@ -110,18 +110,18 @@ public class TransactionService {
 
   // 2. WITHDRAW
   @Transactional
-  public TransactionResponse withdraw(WithdrawRequest request) {
+  public TransactionResponse withdraw(WithdrawRequest request, String email) {
     BigDecimal amount = request.amount();
 
-    if (!accountRepository.existsById(request.fromAccountId())) {
-      throw new AccountNotFoundException(request.fromAccountId());
-    }
-
-    int updated = accountRepository.changeBalance(
+    int updated = accountRepository.changeBalanceForOwner(
         request.fromAccountId(),
+        email,
         amount.negate());
 
     if (updated <= 0) {
+      if (!accountRepository.existsByIdAndUserEmail(request.fromAccountId(), email)) {
+        throw new AccountNotFoundException(request.fromAccountId());
+      }
       throw new InsufficientBalanceException(request.fromAccountId());
     }
 
@@ -137,15 +137,12 @@ public class TransactionService {
 
   // 3. DEPOSIT
   @Transactional
-  public TransactionResponse deposit(DepositRequest request) {
+  public TransactionResponse deposit(DepositRequest request, String email) {
     BigDecimal amount = request.amount();
 
-    if (!accountRepository.existsById(request.toAccountId())) {
-      throw new AccountNotFoundException(request.toAccountId());
-    }
-
-    int updated = accountRepository.changeBalance(
+    int updated = accountRepository.changeBalanceForOwner(
         request.toAccountId(),
+        email,
         amount);
 
     if (updated <= 0) {

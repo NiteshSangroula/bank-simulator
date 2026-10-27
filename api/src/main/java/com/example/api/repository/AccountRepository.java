@@ -26,4 +26,19 @@ public interface AccountRepository extends JpaRepository<Account, Long> {
       """)
   int changeBalance(@Param("accountId") long accountId, @Param("amount") BigDecimal amount);
 
+  @Modifying(clearAutomatically = true, flushAutomatically = true)
+  @Query("""
+      UPDATE Account account
+      SET account.balance = account.balance + :amount
+      WHERE account.id = :accountId
+      AND account.user.email = :email
+      AND account.balance + :amount >= 0
+      """)
+  int changeBalanceForOwner(
+      @Param("accountId") long accountId,
+      @Param("email") String email,
+      @Param("amount") BigDecimal amount);
+
+  boolean existsByIdAndUserEmail(long id, String email);
+
 }

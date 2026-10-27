@@ -44,6 +44,7 @@ public class TransactionIntegrationTest {
     private UserRepository userRepository;
 
     private User owner;
+    private User otherUser;
 
   @BeforeEach
   void setup() {
@@ -56,6 +57,12 @@ public class TransactionIntegrationTest {
     owner.setEmail("integration@example.com");
     owner.setPasswordHash("not-used");
     owner = userRepository.saveAndFlush(owner);
+
+    otherUser = new User();
+    otherUser.setDisplayName("Other User");
+    otherUser.setEmail("other@example.com");
+    otherUser.setPasswordHash("not-used");
+    otherUser = userRepository.saveAndFlush(otherUser);
   }
 
   // Transfer Success
@@ -191,7 +198,7 @@ public class TransactionIntegrationTest {
             "description": "deposit success"
             }
             """.formatted(acc.getId()))
-        .with(user("integration-user"))
+        .with(user(owner.getEmail()))
         .with(csrf()))
         .andExpect(status().isCreated());
 
@@ -234,7 +241,7 @@ public class TransactionIntegrationTest {
             "description": "withdraw success"
             }
             """.formatted(acc.getId()))
-        .with(user("integration-user"))
+        .with(user(owner.getEmail()))
         .with(csrf()))
         .andExpect(status().isCreated());
 
@@ -256,5 +263,59 @@ public class TransactionIntegrationTest {
     assertEquals(
         transaction.getFromAccountId(), updated.getId());
   }
+
+    @Test
+    void deposit_intoAnotherUsersAccountReturnsNotFoundWithoutChangingState() throws Exception {
+        Account account = new Account();
+        account.setUser(otherUser);
+        account.setName("Other user's account");
+        account.setBalance(BigDecimal.valueOf(500));
+        account.setCreatedAt(LocalDateTime.now());
+        account = accountRepository.saveAndFlush(account);
+
+        mockMvc.perform(post("/api/transactions/deposit")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {
+                            "toAccountId": %d,
+                            "amount": 200,
+                            "description": "unauthorized deposit"
+                        }
+                        """.formatted(account.getId()))
+                .with(user(owner.getEmail()))
+                .with(csrf()))
+                .andExpect(status().isNotFound());
+
+        assertEquals(0, BigDecimal.valueOf(500).compareTo(
+                accountRepository.findById(account.getId()).orElseThrow().getBalance()));
+        assertEquals(0, transactionRepository.count());
+    }
+
+    @Test
+    void withdrawFromAnotherUsersAccountReturnsNotFoundWithoutChangingState() throws Exception {
+        Account account = new Account();
+        account.setUser(otherUser);
+        account.setName("Other user's account");
+        account.setBalance(BigDecimal.valueOf(500));
+        account.setCreatedAt(LocalDateTime.now());
+        account = accountRepository.saveAndFlush(account);
+
+        mockMvc.perform(post("/api/transactions/withdraw")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {
+                            "fromAccountId": %d,
+                            "amount": 200,
+                            "description": "unauthorized withdrawal"
+                        }
+                        """.formatted(account.getId()))
+                .with(user(owner.getEmail()))
+                .with(csrf()))
+                .andExpect(status().isNotFound());
+
+        assertEquals(0, BigDecimal.valueOf(500).compareTo(
+                accountRepository.findById(account.getId()).orElseThrow().getBalance()));
+        assertEquals(0, transactionRepository.count());
+    }
 
 }
