@@ -60,12 +60,13 @@ public class TransactionControllerMvcTest {
     TransactionResponse response = new TransactionResponse(
         1L, new BigDecimal("100"), TransactionType.TRANSFER, 1L, 2L, LocalDateTime.now(), "test");
 
-    when(service.transfer(any(TransferRequest.class)))
+    when(service.transfer(any(TransferRequest.class), eq(EMAIL)))
         .thenReturn(response);
 
     mockMvc.perform(post("/api/transactions/transfer")
         .contentType(MediaType.APPLICATION_JSON)
-        .content(objectMapper.writeValueAsString(request)))
+        .content(objectMapper.writeValueAsString(request))
+        .with(authenticatedPrincipal()))
         .andExpect(status().isCreated())
         .andExpect(jsonPath("$.id").value(1L))
         .andExpect(jsonPath("$.amount").value(100))
@@ -88,7 +89,7 @@ public class TransactionControllerMvcTest {
         .andExpect(jsonPath("$.fieldErrors[0].code").value("NotNull"))
         .andExpect(jsonPath("$.message").doesNotExist());
 
-    verify(service, never()).transfer(any());
+    verify(service, never()).transfer(any(), anyString());
   }
 
   @Test
@@ -104,7 +105,7 @@ public class TransactionControllerMvcTest {
         .andExpect(jsonPath("$.fieldErrors[0].code").value("NotNull"))
         .andExpect(jsonPath("$.message").doesNotExist());
 
-    verify(service, never()).transfer(any());
+    verify(service, never()).transfer(any(), anyString());
   }
 
   @Test
@@ -120,7 +121,7 @@ public class TransactionControllerMvcTest {
         .andExpect(jsonPath("$.fieldErrors[0].code").value("NotNull"))
         .andExpect(jsonPath("$.message").doesNotExist());
 
-    verify(service, never()).transfer(any());
+    verify(service, never()).transfer(any(), anyString());
   }
 
   @Test
@@ -136,7 +137,7 @@ public class TransactionControllerMvcTest {
         .andExpect(jsonPath("$.fieldErrors[0].code").value("Positive"))
         .andExpect(jsonPath("$.message").doesNotExist());
 
-    verify(service, never()).transfer(any());
+    verify(service, never()).transfer(any(), anyString());
   }
 
   @Test
@@ -152,7 +153,7 @@ public class TransactionControllerMvcTest {
         .andExpect(jsonPath("$.fieldErrors[0].code").value("NotBlank"))
         .andExpect(jsonPath("$.message").doesNotExist());
 
-    verify(service, never()).transfer(any());
+    verify(service, never()).transfer(any(), anyString());
   }
 
   // -----------------------WITHDRAW

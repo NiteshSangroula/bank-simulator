@@ -57,13 +57,13 @@ public class TransactionServiceTest {
         amount,
         "test");
 
-    when(accountRepository.existsById(fromId))
+    when(accountRepository.existsByIdAndUserEmail(fromId, EMAIL))
         .thenReturn(true);
 
     when(accountRepository.existsById(toId))
         .thenReturn(true);
 
-    when(accountRepository.changeBalance(fromId, amount.negate()))
+    when(accountRepository.changeBalanceForOwner(fromId, EMAIL, amount.negate()))
         .thenReturn(1);
 
     when(accountRepository.changeBalance(toId, amount))
@@ -82,7 +82,7 @@ public class TransactionServiceTest {
         .thenReturn(saved);
 
     // Act
-    TransactionResponse response = transactionService.transfer(request);
+    TransactionResponse response = transactionService.transfer(request, EMAIL);
 
     // Assert
     assertEquals(10L, response.id());
@@ -91,7 +91,7 @@ public class TransactionServiceTest {
     assertEquals(toId, response.toAccountId());
     assertEquals(TransactionType.TRANSFER, response.type());
 
-    verify(accountRepository).changeBalance(fromId, amount.negate());
+    verify(accountRepository).changeBalanceForOwner(fromId, EMAIL, amount.negate());
     verify(accountRepository).changeBalance(toId, amount);
     verify(transactionRepository).save(any(Transaction.class));
 
@@ -217,17 +217,17 @@ public class TransactionServiceTest {
         amount,
         "test");
 
-    when(accountRepository.existsById(fromId))
+    when(accountRepository.existsByIdAndUserEmail(fromId, EMAIL))
         .thenReturn(true);
 
     when(accountRepository.existsById(toId))
         .thenReturn(true);
 
-    when(accountRepository.changeBalance(fromId, amount.negate()))
+    when(accountRepository.changeBalanceForOwner(fromId, EMAIL, amount.negate()))
         .thenReturn(0);
 
     assertThrows(InsufficientBalanceException.class,
-        () -> transactionService.transfer(request));
+        () -> transactionService.transfer(request, EMAIL));
     verify(transactionRepository, never()).save(any());
   }
 
@@ -269,14 +269,14 @@ public class TransactionServiceTest {
     TransferRequest request = new TransferRequest(
         fromId, toId, BigDecimal.TEN, "test");
 
-    when(accountRepository.existsById(fromId))
+    when(accountRepository.existsByIdAndUserEmail(fromId, EMAIL))
         .thenReturn(true);
 
     when(accountRepository.existsById(toId))
         .thenReturn(false);
 
     assertThrows(AccountNotFoundException.class,
-        () -> transactionService.transfer(request));
+        () -> transactionService.transfer(request, EMAIL));
 
     verify(accountRepository, never()).changeBalance(anyLong(), any());
     verify(transactionRepository, never()).save(any());
@@ -289,11 +289,11 @@ public class TransactionServiceTest {
     TransferRequest request = new TransferRequest(
         fromId, toId, BigDecimal.TEN, "test");
 
-    when(accountRepository.existsById(fromId))
+    when(accountRepository.existsByIdAndUserEmail(fromId, EMAIL))
         .thenReturn(false);
 
     assertThrows(AccountNotFoundException.class,
-        () -> transactionService.transfer(request));
+        () -> transactionService.transfer(request, EMAIL));
 
     verify(accountRepository, never()).changeBalance(anyLong(), any());
     verify(transactionRepository, never()).save(any());

@@ -54,9 +54,10 @@ public class TransactionController {
   @Operation(summary = "Transfer amount from one account to another")
   @PostMapping("/transfer")
   public ResponseEntity<TransactionResponse> createTransferTransaction(
-      @Valid @RequestBody TransferRequest request) {
+      @Valid @RequestBody TransferRequest request,
+      Authentication authentication) {
 
-    TransactionResponse created = transactionService.transfer(request);
+    TransactionResponse created = transactionService.transfer(request, authentication.getName());
 
     return ResponseEntity
         .status(HttpStatus.CREATED)

@@ -67,11 +67,11 @@ public class TransactionService {
 
   // 1. TRANSFER
   @Transactional
-  public TransactionResponse transfer(TransferRequest request) {
+  public TransactionResponse transfer(TransferRequest request, String email) {
 
     BigDecimal amount = request.amount();
 
-    if (!accountRepository.existsById(request.fromAccountId())) {
+    if (!accountRepository.existsByIdAndUserEmail(request.fromAccountId(), email)) {
       throw new AccountNotFoundException(request.fromAccountId());
     }
 
@@ -80,11 +80,15 @@ public class TransactionService {
     }
 
     // 1. Debit sender first
-    int updated = accountRepository.changeBalance(
+    int updated = accountRepository.changeBalanceForOwner(
         request.fromAccountId(),
+        email,
         amount.negate());
 
     if (updated <= 0) {
+      if (!accountRepository.existsByIdAndUserEmail(request.fromAccountId(), email)) {
+        throw new AccountNotFoundException(request.fromAccountId());
+      }
       throw new InsufficientBalanceException(request.fromAccountId());
     }
 
