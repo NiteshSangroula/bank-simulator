@@ -24,8 +24,10 @@ import com.example.api.dto.request.CreateAccountRequest;
 import com.example.api.dto.response.AccountResponse;
 import com.example.api.entity.Account;
 import com.example.api.entity.User;
+import com.example.api.exception.AccountDeletionException;
 import com.example.api.exception.AccountNotFoundException;
 import com.example.api.repository.AccountRepository;
+import com.example.api.repository.TransactionRepository;
 import com.example.api.repository.UserRepository;
 
 @ExtendWith(MockitoExtension.class)
@@ -34,6 +36,9 @@ public class AccountServiceTest {
 
   @Mock
   private AccountRepository accountRepository;
+
+  @Mock
+  private TransactionRepository transactionRepository;
 
   @Mock
   private UserRepository userRepository;
@@ -162,13 +167,40 @@ public class AccountServiceTest {
 
   // ====== DELETE ACCOUNT TESTS ======
   @Test
-  public void deleteAccount_shouldCallRepository() {
+  public void deleteAccount_shouldDeleteEmptyZeroBalanceAccount() {
     Account account = new Account();
+    account.setBalance(BigDecimal.ZERO);
     when(accountRepository.findByIdAndUserEmail(1L, EMAIL)).thenReturn(Optional.of(account));
+    when(transactionRepository.existsByFromAccountIdOrToAccountId(1L, 1L)).thenReturn(false);
 
     accountService.deleteAccount(1L, EMAIL);
 
+    verify(transactionRepository).existsByFromAccountIdOrToAccountId(1L, 1L);
     verify(accountRepository).delete(account);
+  }
+
+  @Test
+  public void deleteAccount_shouldRejectNonzeroBalance() {
+    Account account = new Account();
+    account.setBalance(new BigDecimal("0.01"));
+    when(accountRepository.findByIdAndUserEmail(1L, EMAIL)).thenReturn(Optional.of(account));
+
+    assertThrows(AccountDeletionException.class, () -> accountService.deleteAccount(1L, EMAIL));
+
+    verify(transactionRepository, never()).existsByFromAccountIdOrToAccountId(1L, 1L);
+    verify(accountRepository, never()).delete(any(Account.class));
+  }
+
+  @Test
+  public void deleteAccount_shouldRejectAccountWithTransactionHistory() {
+    Account account = new Account();
+    account.setBalance(BigDecimal.ZERO);
+    when(accountRepository.findByIdAndUserEmail(1L, EMAIL)).thenReturn(Optional.of(account));
+    when(transactionRepository.existsByFromAccountIdOrToAccountId(1L, 1L)).thenReturn(true);
+
+    assertThrows(AccountDeletionException.class, () -> accountService.deleteAccount(1L, EMAIL));
+
+    verify(accountRepository, never()).delete(any(Account.class));
   }
 
   @Test
@@ -177,6 +209,7 @@ public class AccountServiceTest {
 
     assertThrows(AccountNotFoundException.class, () -> accountService.deleteAccount(1L, EMAIL));
 
+    verify(transactionRepository, never()).existsByFromAccountIdOrToAccountId(1L, 1L);
     verify(accountRepository, never()).delete(any(Account.class));
   }
 

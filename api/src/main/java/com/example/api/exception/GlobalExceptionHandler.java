@@ -52,6 +52,22 @@ public class GlobalExceptionHandler {
     return new ResponseEntity<>(error, HttpStatus.NOT_FOUND);
   }
 
+  @ExceptionHandler(AccountDeletionException.class)
+  public ResponseEntity<ErrorResponse> handleAccountDeletionRejected(
+      AccountDeletionException ex,
+      HttpServletRequest request) {
+
+    ErrorResponse error = new ErrorResponse(
+        LocalDateTime.now(),
+        HttpStatus.CONFLICT.value(),
+        HttpStatus.CONFLICT.getReasonPhrase(),
+        ex.getMessage(),
+        request.getRequestURI(),
+        null);
+
+    return new ResponseEntity<>(error, HttpStatus.CONFLICT);
+  }
+
   // 3. Insufficient Balance
   @ExceptionHandler(InsufficientBalanceException.class)
   public ResponseEntity<ErrorResponse> handleInsufficientBalance(

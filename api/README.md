@@ -184,17 +184,22 @@ POST /api/transactions/withdraw
 POST /api/transactions/transfer
 GET  /api/transactions
 GET  /api/transactions/{id}
-GET  /api/transactions/account/{accountId}
 ```
 
 ---
 
 ## 📄 Pagination Example
-GET /api/transactions?size=10&offset=0
+Transaction history uses zero-based `page` and `size` query parameters. Defaults are `page=0` and `size=10`:
 
-Filter by account:
+```
+GET /api/transactions?page=0&size=10
+```
 
-GET /api/transactions/account/{accountId}?size=10&offset=0
+Filter history to one owned account with the optional `accountId` parameter:
+
+```
+GET /api/transactions?accountId={accountId}&page=0&size=10
+```
 
 ---
 
