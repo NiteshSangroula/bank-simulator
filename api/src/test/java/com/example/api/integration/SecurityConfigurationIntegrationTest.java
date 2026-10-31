@@ -183,6 +183,34 @@ class SecurityConfigurationIntegrationTest {
         .andExpect(status().isForbidden());
   }
 
+  @Test
+  void csrfEndpointReturnsTokenContractUsableForAuthenticatedStateChange() throws Exception {
+    saveUser();
+    MvcResult csrfResult = mockMvc.perform(get("/api/auth/csrf"))
+        .andExpect(status().isOk())
+        .andReturn();
+
+    var csrfResponse = objectMapper.readTree(csrfResult.getResponse().getContentAsString());
+    assertEquals(3, csrfResponse.size());
+    assertEquals("X-CSRF-TOKEN", csrfResponse.get("headerName").asText());
+    assertEquals("_csrf", csrfResponse.get("parameterName").asText());
+    assertTrue(!csrfResponse.get("token").asText().isBlank());
+
+    MockHttpSession session = (MockHttpSession) csrfResult.getRequest().getSession(false);
+    assertNotNull(session);
+
+    mockMvc.perform(post("/api/accounts")
+        .session(session)
+        .with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user(EMAIL))
+        .header(csrfResponse.get("headerName").asText(), csrfResponse.get("token").asText())
+        .contentType(MediaType.APPLICATION_JSON)
+        .content("""
+            {"name":"CSRF verified","initialAmount":10}
+            """))
+        .andExpect(status().isCreated())
+        .andExpect(jsonPath("$.name").value("CSRF verified"));
+  }
+
   private void saveUser() {
     User user = new User();
     user.setDisplayName("Security User");

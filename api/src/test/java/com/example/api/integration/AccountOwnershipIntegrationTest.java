@@ -23,6 +23,8 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
 import com.example.api.entity.Account;
+import com.example.api.entity.Transaction;
+import com.example.api.entity.TransactionType;
 import com.example.api.entity.User;
 import com.example.api.repository.AccountRepository;
 import com.example.api.repository.TransactionRepository;
@@ -97,8 +99,8 @@ class AccountOwnershipIntegrationTest {
 
   @Test
   void ownerCanRetrieveAndDeleteAccountButCannotAccessAnotherUsersAccount() throws Exception {
-    Account ownedAccount = saveAccount(owner, "Owned");
-    Account foreignAccount = saveAccount(otherUser, "Foreign");
+    Account ownedAccount = saveAccount(owner, "Owned", BigDecimal.ZERO);
+    Account foreignAccount = saveAccount(otherUser, "Foreign", BigDecimal.ZERO);
 
     mockMvc.perform(get("/api/accounts/{id}", ownedAccount.getId()).with(user(OWNER_EMAIL)))
         .andExpect(status().isOk())
@@ -120,6 +122,42 @@ class AccountOwnershipIntegrationTest {
     assertTrue(accountRepository.findById(foreignAccount.getId()).isPresent());
   }
 
+  @Test
+  void accountWithNonzeroBalanceCannotBeDeleted() throws Exception {
+    Account account = saveAccount(owner, "Funded", new BigDecimal("25.00"));
+
+    mockMvc.perform(delete("/api/accounts/{id}", account.getId())
+        .with(user(OWNER_EMAIL))
+        .with(csrf()))
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.message").value(
+            "Account cannot be deleted while it has a nonzero balance or transaction history"));
+
+    assertTrue(accountRepository.findById(account.getId()).isPresent());
+  }
+
+  @Test
+  void accountWithTransactionHistoryCannotBeDeletedEvenWithZeroBalance() throws Exception {
+    Account account = saveAccount(owner, "Used", BigDecimal.ZERO);
+    Transaction transaction = new Transaction();
+    transaction.setAmount(new BigDecimal("10.00"));
+    transaction.setType(TransactionType.DEPOSIT);
+    transaction.setToAccountId(account.getId());
+    transaction.setCreatedAt(LocalDateTime.now());
+    transaction.setDescription("Existing history");
+    transaction = transactionRepository.saveAndFlush(transaction);
+
+    mockMvc.perform(delete("/api/accounts/{id}", account.getId())
+        .with(user(OWNER_EMAIL))
+        .with(csrf()))
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.message").value(
+            "Account cannot be deleted while it has a nonzero balance or transaction history"));
+
+    assertTrue(accountRepository.findById(account.getId()).isPresent());
+    assertTrue(transactionRepository.findById(transaction.getId()).isPresent());
+  }
+
   private User newUser(String displayName, String email) {
     User user = new User();
     user.setDisplayName(displayName);
@@ -129,10 +167,14 @@ class AccountOwnershipIntegrationTest {
   }
 
   private Account saveAccount(User owner, String name) {
+    return saveAccount(owner, name, new BigDecimal("100.00"));
+  }
+
+  private Account saveAccount(User owner, String name, BigDecimal balance) {
     Account account = new Account();
     account.setUser(owner);
     account.setName(name);
-    account.setBalance(new BigDecimal("100.00"));
+    account.setBalance(balance);
     account.setCreatedAt(LocalDateTime.now());
     return accountRepository.saveAndFlush(account);
   }

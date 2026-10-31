@@ -12,6 +12,8 @@ import com.example.api.entity.Transaction;
 
 public interface TransactionRepository extends JpaRepository<Transaction, Long> {
 
+  boolean existsByFromAccountIdOrToAccountId(Long fromAccountId, Long toAccountId);
+
     @Query("""
       SELECT transaction FROM Transaction transaction
       WHERE EXISTS (

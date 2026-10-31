@@ -1,6 +1,7 @@
 package com.example.api.service;
 
 import java.time.LocalDateTime;
+import java.math.BigDecimal;
 import java.util.List;
 
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -9,17 +10,24 @@ import org.springframework.stereotype.Service;
 import com.example.api.dto.request.CreateAccountRequest;
 import com.example.api.dto.response.AccountResponse;
 import com.example.api.entity.Account;
+import com.example.api.exception.AccountDeletionException;
 import com.example.api.exception.AccountNotFoundException;
 import com.example.api.repository.AccountRepository;
+import com.example.api.repository.TransactionRepository;
 import com.example.api.repository.UserRepository;
 
 @Service
 public class AccountService {
   private final AccountRepository accountRepository;
+  private final TransactionRepository transactionRepository;
   private final UserRepository userRepository;
 
-  public AccountService(AccountRepository accountRepository, UserRepository userRepository) {
+  public AccountService(
+      AccountRepository accountRepository,
+      TransactionRepository transactionRepository,
+      UserRepository userRepository) {
     this.accountRepository = accountRepository;
+    this.transactionRepository = transactionRepository;
     this.userRepository = userRepository;
   }
 
@@ -61,6 +69,12 @@ public class AccountService {
   public void deleteAccount(long id, String email) {
     Account account = accountRepository.findByIdAndUserEmail(id, email)
         .orElseThrow(() -> new AccountNotFoundException(id));
+
+    if (account.getBalance().compareTo(BigDecimal.ZERO) != 0
+        || transactionRepository.existsByFromAccountIdOrToAccountId(id, id)) {
+      throw new AccountDeletionException();
+    }
+
     accountRepository.delete(account);
   }
 
